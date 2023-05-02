@@ -134,6 +134,181 @@ function viewAllEmployees() {
   });
 }
 
+function viewAllDepartments() {
+  const query = `SELECT * from department;`;
+  db.query(query, (err, res) => {
+      if (err) throw err;
+      console.log('\n');
+      console.log('VIEW ALL DEPARTMENTS');
+      console.log('\n');
+      console.table(res);
+      prompt();
+  });
+}
+
+function viewAllRoles() {
+  const query = `SELECT * from role;`;
+  db.query(query, (err, res) => {
+      if (err) throw err;
+      console.log('\n');
+      console.log('VIEW ALL ROLES');
+      console.log('\n');
+      console.table(res);
+      prompt();
+  });
+}
+
+async function updateRole() {
+  const roleID = await inquirer.prompt(locateID());
+
+  db.query('SELECT role.id, role.title, role.salary, role.department_id FROM role ORDER BY role.id;', async (err, res) => {
+      if (err) throw err;
+      const { role } = await inquirer.prompt([
+          {
+              name: 'role',
+              type: 'list',
+              choices: () => res.map(res => res.title),
+              message: 'What is the new employee role?: '
+          },
+          {
+            name: 'role',
+            type: 'list',
+            choices: () => res.map(res => res.salary),
+            message: 'What is the new employee salary?: '
+        },
+        {
+          name: 'role',
+          type: 'list',
+          choices: () => res.map(res => res.department_id),
+          message: 'What is the new department ID?: '
+      },
+      ]);
+      let roleID;
+      for (const row of res) {
+          if (row.title === role) {
+              roleID = row.id;
+              continue;
+          }
+      }
+      db.query(`UPDATE employee 
+      SET role_id = ${roleID}
+      WHERE employee.id = ${employeeID.name}`, async (err, res) => {
+          if (err) throw err;
+          console.log('Role has been updated..')
+          prompt();
+      });
+  });
+}
+
+async function addEmployee() {
+    const addPerson = await inquirer.prompt(askName());
+      db.query('SELECT role.id, role.title FROM role ORDER BY role.id;', async (err, res) => {
+      if (err) throw err;
+      const { role } = await inquirer.prompt([
+          {
+              name: 'role',
+              type: 'list',
+              choices: () => res.map(res => res.title),
+              message: 'What is the employee role?: '
+          }
+          // {
+          //   name: 'text',
+          //   type: 'input',
+          //   choices: () => res.map(res => res.last_name),
+          //   message: 'What is the employee last name?: '
+          // },
+          // {
+          //   name: 'roleID',
+          //   type: 'number',
+          //   choices: () => res.map(res => res.role_id),
+          //   message: 'What is the role ID?: '
+          // },
+          // {
+          //   name: 'LineID',
+          //   type: 'number',
+          //   choices: () => res.map(res => res.role_id),
+          //   message: 'What is the manager ID?: '
+          // },
+      ]);
+      let roleId;
+      for (const row of res) {
+          if (row.title === role) {
+              roleId = row.id;
+              continue;
+          }
+      }
+      db.query('SELECT * FROM employee', async (err, res) => {
+          if (err) throw err;
+          let choices = res.map(res => `${res.first_name} ${res.last_name}`);
+          choices.push('none');
+          let { manager } = await inquirer.prompt([
+              {
+                  name: 'manager',
+                  type: 'list',
+                  choices: choices,
+                  message: 'Choose the employee Manager: '
+              }
+          ]);
+          let managerID;
+          if (manager === 'none') {
+              managerID = NULL;
+          } else {
+              for (const data of res) {
+                  data.fullName = `${data.first_name} ${data.last_name}`;
+                  if (data.fullName === manager) {
+                      managerID = data.id;
+                      managerName = data.fullName;
+                      console.log(managerID);
+                      console.log(managerName);
+                      continue;
+                  }
+              }
+          }
+          console.log('Employee has been added. Please view all employees to verify...');
+          db.query(
+              'INSERT INTO employee SET ?',
+              {
+                  first_name: addPerson.first,
+                  last_name: addPerson.last,
+                  role_id: roleId,
+                  manager_id: parseInt(managerID)
+              },
+              (err, res) => {
+                  if (err) throw err;
+                  prompt();
+
+              }
+          );
+      });
+  });
+}
+
+function askName() {
+  return ([
+      {
+          name: 'first',
+          type: 'input',
+          message: 'What is the employee first name?'
+      },
+      {
+          name: 'last',
+          type: 'input',
+          message: 'What is the employee last name?'
+      }
+  ]);
+}
+
+//display user inputs
+// var text = "";
+// if (answers.text.length > 0 && answers.text.length < 31) {
+//   // valid character length between 1-30 chars
+//   text = answers.text;
+// } else {
+//   // invalid character length
+//   console.log("Invalid text length.  Please enter text length of upto 30 characters");
+//   return "Invalid"
+// }
+
 // Create a function to initialize app
 // async function init() {
 //     //ask prompt(questions)
