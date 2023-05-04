@@ -13,11 +13,11 @@
 
 ## Description
 
-Build a SQL database in order to view and manage the departments, employees and roles within a company
+Build a SQL database in order to view and manage the departments, employees and roles within a company.
 
 ## Installation
 
-To install the required dependencies, run the following command:
+To install the required dependencies, run the following commands:
 
 npm i inquirer
 
@@ -29,11 +29,11 @@ npm i dotenv
 
 ## Usage
 
-See walkthrough video below.
+See walkthrough video in the link below.
 
 
 
-https://user-images.githubusercontent.com/80605132/236244881-8abb7e86-0e0b-4032-a328-f5107d28de68.mp4
+https://drive.google.com/file/d/1hrsn0ZpOvXM4uqLkri9XKhTpMgyqA6tX/view?usp=share_link
 
 
 
