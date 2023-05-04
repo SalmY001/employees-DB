@@ -48,7 +48,11 @@ Please refer to license in the repo.
 
 Sources viewed to help in the development of the app include:
 
-Content viewed to help in the development of the application are: https://github.com/Ethanlloyd21/MySQL-Employee-Tracker, https://www.npmjs.com/package/mysql, https://www.npmjs.com/package/dotenv
+https://github.com/Ethanlloyd21/MySQL-Employee-Tracker
+
+https://www.npmjs.com/package/mysql
+
+https://www.npmjs.com/package/dotenv
 
 ## Questions
 
