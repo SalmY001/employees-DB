@@ -1,6 +1,7 @@
 // Import and require dependencies
 const express = require('express');
-const inquirer = require('inquirer')
+const inquirer = require('inquirer');
+const { isNull } = require('mathjs');
 const mysql = require('mysql2');
 const dotenv = require("dotenv").config();
 
@@ -47,10 +48,13 @@ app.use(express.json());
     viewAllEmployees: "View All Employees",
     viewAllDepartments: "View All Departments",
     viewAllRoles: "View All Roles",
+    viewSalaries: "View Department Spend",
+    viewByManager: "View Employees By Manager",
     addEmployee: "Add Employee",
     addDepartment: "Add Department",
     addRole: "Add Role",
     updateRole: "Update Employee Role",
+    removeEmployee: "Remove Employee",
     quit: "Quit"
   };
 
@@ -81,6 +85,8 @@ function prompt() {
               userSelections.addDepartment,
               userSelections.addRole,
               userSelections.updateRole,
+              userSelections.removeEmployee,
+              userSelections.viewSalaries,
               userSelections.quit
           ]
       })
@@ -99,6 +105,14 @@ function prompt() {
                   viewAllRoles();
                   break;
 
+              case userSelections.viewByManager:
+                  viewByManager();
+                  break;
+
+              case userSelections.viewSalaries:
+                  viewSalaries();
+                  break;
+
               case userSelections.addEmployee:
                   addEmployee();
                   break;
@@ -115,15 +129,24 @@ function prompt() {
                   remove('role');
                   break;
 
+              case userSelections.removeEmployee:
+                  remove('delete');
+                  break;
+
               case userSelections.quit:
-                  connection.end();
+                  db.end();
                   break;
           }
       });
 }
 
 function viewAllEmployees() {
-  const query = `SELECT * from employee;`;
+  const query = `SELECT employee.id, employee.first_name, employee.last_name, role.title, department.department_name AS department, role.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+  FROM employee
+  LEFT JOIN employee manager on manager.id = employee.manager_id
+  INNER JOIN role ON (role.id = employee.role_id)
+  INNER JOIN department ON (department.id = role.department_id)
+  ORDER BY employee.id;`;
   db.query(query, (err, res) => {
       if (err) throw err;
       console.log('\n');
@@ -135,7 +158,7 @@ function viewAllEmployees() {
 }
 
 function viewAllDepartments() {
-  const query = `SELECT * from department;`;
+  const query = `SELECT * FROM department ORDER BY department.id;`;
   db.query(query, (err, res) => {
       if (err) throw err;
       console.log('\n');
@@ -147,7 +170,11 @@ function viewAllDepartments() {
 }
 
 function viewAllRoles() {
-  const query = `SELECT * from role;`;
+  const query = `SELECT * FROM role;`;
+  // `SELECT role.id, role.title, role.salary, department.department_name AS department FROM department
+  // INNER JOIN department ON (department.id = role.department_id)
+  // ORDER BY role.title;`;
+  //INNER JOIN department ON (department.id = role.department_id)
   db.query(query, (err, res) => {
       if (err) throw err;
       console.log('\n');
@@ -158,9 +185,18 @@ function viewAllRoles() {
   });
 }
 
-async function updateRole() {
-  const roleID = await inquirer.prompt(locateID());
+function locateID() {
+    return ([
+        {
+            name: 'name',
+            type: 'input',
+            message: 'What is the employee ID?:'
+        }
+    ]);
+}
 
+async function updateRole() {
+  const employeeID = await inquirer.prompt(locateID());
   db.query('SELECT role.id, role.title, role.salary, role.department_id FROM role ORDER BY role.id;', async (err, res) => {
       if (err) throw err;
       const { role } = await inquirer.prompt([
@@ -168,21 +204,22 @@ async function updateRole() {
               name: 'role',
               type: 'list',
               choices: () => res.map(res => res.title),
-              message: 'What is the new employee role?: '
+              message: 'What is the updated employee role?: '
           },
           {
             name: 'role',
             type: 'list',
             choices: () => res.map(res => res.salary),
-            message: 'What is the new employee salary?: '
+            message: 'What is the updated employee salary?: '
         },
         {
           name: 'role',
           type: 'list',
           choices: () => res.map(res => res.department_id),
-          message: 'What is the new department ID?: '
+          message: 'What is the updated department ID?: '
       },
       ]);
+
       let roleID;
       for (const row of res) {
           if (row.title === role) {
@@ -199,6 +236,25 @@ async function updateRole() {
       });
   });
 }
+
+function remove(input) {
+    const askUser = {
+        yes: "Yes",
+        no: "No I don't (view all employees on the main option)"
+    };
+    inquirer.prompt([
+        {
+            name: "action",
+            type: "list",
+            message: "An employee ID must be entered. View all employees to get the employee ID. Do you know the employee ID?",
+            choices: [askUser.yes, askUser.no]
+        }
+    ]).then(answer => {
+        if (input === 'delete' && answer.action === 'Yes') removeEmployee();
+        else if (input === 'role' && answer.action === 'Yes') updateRole();
+        else viewAllEmployees();
+    });
+};
 
 async function addEmployee() {
     const addPerson = await inquirer.prompt(askName());
@@ -251,7 +307,7 @@ async function addEmployee() {
           ]);
           let managerID;
           if (manager === 'none') {
-              managerID = NULL;
+              managerID = null;
           } else {
               for (const data of res) {
                   data.fullName = `${data.first_name} ${data.last_name}`;
@@ -260,6 +316,7 @@ async function addEmployee() {
                       managerName = data.fullName;
                       console.log(managerID);
                       console.log(managerName);
+                      console.log(data.id);
                       continue;
                   }
               }
@@ -271,7 +328,7 @@ async function addEmployee() {
                   first_name: addPerson.first,
                   last_name: addPerson.last,
                   role_id: roleId,
-                  manager_id: parseInt(managerID)
+                  manager_id: managerID
               },
               (err, res) => {
                   if (err) throw err;
@@ -282,6 +339,90 @@ async function addEmployee() {
       });
   });
 }
+
+async function addDepartment() {
+  const answers = await inquirer.prompt ([
+    {name: 'department',
+    message: 'What is the name of the department?:',
+    type: 'input'
+    }
+  ])
+
+    const department = answers.department
+    db.query(
+        `INSERT INTO department (department_name) VALUES ('${department}')`,
+        (err, res) => {
+            if (err) throw err;
+            console.log('The new department has been added. Please view all departments to verify...');
+            prompt();
+    })
+}
+
+
+// async function addRole() {
+//     db.query('SELECT role.title, role.salary FROM role;', async (err, res) => {
+//         if (err) throw err;
+//     const answers = await inquirer.prompt ([
+//       {
+//         name: 'role',
+//         message: 'What is the title of the role?:',
+//         type: 'input'
+//       },
+//       {
+//         name: 'salary',
+//         message: 'What is the salary for the role?:',
+//         type: 'input'
+//       },
+//     //   {
+//     //     name: 'department',
+//     //     type: 'list',
+//     //     choices: () => res.map(res => res.department),
+//     //     message: 'What department does the role belong to?: '
+//     //   }
+//     ])
+
+//     db.query(
+//     'INSERT INTO role SET ?',
+//     {
+//         title: addRole.title,
+//         salary: addRole.salary
+//     },
+//     (err, res) => {
+//         if (err) throw err;
+//         prompt();
+//     })
+//     })
+// }
+
+// async function addRole() {
+//     const answers = await inquirer.prompt ([
+//     {
+//       name: 'addRole',
+//       type: "input",
+//       message: "'What is the title of the role?;"
+//     },
+//     {
+//         name: 'addSalary',
+//         type: "input",
+//         message: "'What is the salary for the role?;"
+//     }
+//     ])
+//     .then(function (answers) {
+//       console.log(answers.addRole);
+//       console.log(answers.addSalary);
+//       db.query("INSERT INTO role SET ?",
+//       {
+//         title: answers.addRole,
+//         salary: answers.addSalary
+//       }, function (err, res) {
+//         if (err) throw err;
+//         console.table(res);
+//         console.log("The role has been added.");
+//         prompt()
+//       })
+//     }); 
+// }
+
 
 function askName() {
   return ([
@@ -327,3 +468,12 @@ function askName() {
 
 // Function call to initialize app
 // init();
+
+// ADD ROLE
+// 1. Create function addRole
+// 2. Ask questions from user to get information for inquirer.prompt
+// 3. Query database to get from the department table
+// 4. Make an inquiry.prompt to return a list of departments that the user can choose from
+// 5. Make a call to insert into the role table; salary, title, dept
+
+
