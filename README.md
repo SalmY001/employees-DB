@@ -13,7 +13,7 @@
 
 ## Description
 
-Build a SQL database in order to view and manage the departments, employees and roles within a company.
+The application helps to start building a SQL database in order to view and manage the departments, employees and roles within a company.
 
 ## Installation
 
@@ -42,7 +42,7 @@ https://drive.google.com/file/d/1uDbgu6OsH2MQ_xcmj7JRhovD0tvE640d/view?usp=share
 This project is under the MIT license:
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Please refer to license in the repo.
+Please refer to the license in the repo.
 
 ## Contributors
 
